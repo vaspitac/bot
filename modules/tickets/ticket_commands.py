@@ -2,8 +2,9 @@ import discord
 from discord.ext import commands
 from discord import Embed
 from database import db
-from .ticket_views import TicketView
+from .ticket_views import TicketView  # Make sure ticket_views.py exists and exports TicketView
 
+# Points for each ticket category
 CATEGORY_POINTS = {
     "Ultra Speaker Express": 8,
     "Ultra Gramiel Express": 7,
@@ -14,6 +15,7 @@ CATEGORY_POINTS = {
     "Daily Temple Express": 6
 }
 
+# Number of helper slots for each ticket category
 CATEGORY_SLOTS = {
     "Ultra Speaker Express": 3,
     "Ultra Gramiel Express": 3,
@@ -24,6 +26,7 @@ CATEGORY_SLOTS = {
     "Daily Temple Express": 3
 }
 
+# Channel name prefix for each category
 CATEGORY_CHANNEL_NAMES = {
     "Ultra Speaker Express": "ultra-speaker",
     "Ultra Gramiel Express": "ultra-gramiel",
@@ -64,7 +67,8 @@ class TicketCommandsCog(commands.Cog):
         }
 
         # Create channel
-        category_channel = interaction.guild.get_channel((await db.get_server_config(guild_id))["ticket_category_id"])
+        server_config = await db.get_server_config(guild_id)
+        category_channel = interaction.guild.get_channel(server_config["ticket_category_id"])
         ticket_channel = await interaction.guild.create_text_channel(
             name=channel_name,
             category=category_channel,
@@ -72,10 +76,11 @@ class TicketCommandsCog(commands.Cog):
             reason=f"{category} ticket created by {interaction.user.display_name}"
         )
 
+        # Ticket view
         slots = CATEGORY_SLOTS[category]
         ticket_view = TicketView(interaction.user, category, slots, guild_id, ticket_channel)
 
-        # Embed
+        # Embed message
         embed = Embed(title=f"🎫 {category} Ticket", color=discord.Color.green())
         for k, v in answers.items():
             if v:
@@ -84,10 +89,15 @@ class TicketCommandsCog(commands.Cog):
         embed.add_field(name="👥 Helpers", value="\n".join(helper_list), inline=False)
         embed.add_field(name="🏆 Points Value", value=f"{CATEGORY_POINTS[category]} points", inline=True)
 
-        await ticket_channel.send(f"Hello {interaction.user.mention}! Your ticket has been created.", embed=embed, view=ticket_view)
+        await ticket_channel.send(
+            f"Hello {interaction.user.mention}! Your ticket has been created.",
+            embed=embed,
+            view=ticket_view
+        )
 
-        # Save ticket in DB
+        # Save ticket in database
         await db.save_active_ticket(guild_id, ticket_channel.id, interaction.user.id, category, ticket_number)
 
-def setup(bot):
+# Setup function for loading as a Cog
+def setup_ticket_commands(bot):
     bot.add_cog(TicketCommandsCog(bot))
