@@ -203,5 +203,5 @@ class PointsCog(commands.Cog):
         await ctx.send("⚠️ Are you sure you want to reset the leaderboard?", view=Confirm())
 
 # ==================== LOAD COG ====================
-def setup(bot):
-    bot.add_cog(PointsCog(bot))
+async def setup(bot):
+    await bot.add_cog(PointsCog(bot))

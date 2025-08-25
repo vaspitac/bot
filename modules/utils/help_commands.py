@@ -121,5 +121,5 @@ class HelpCommandsCog(commands.Cog):
             points = await db.get_user_points(interaction.guild.id, interaction.user.id)
             await interaction.response.send_message(f"💰 {interaction.user.display_name} has {points} points.")
 
-def setup(bot):
-    bot.add_cog(HelpCommandsCog(bot))
+async def setup(bot):
+    await bot.add_cog(HelpCommandsCog(bot))

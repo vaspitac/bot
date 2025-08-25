@@ -22,5 +22,5 @@ class SetupResetCog(commands.Cog):
                                       transcript_channel_id=None)
         await ctx.send("⚠️ Setup has been fully reset!")
 
-def setup(bot):
-    bot.add_cog(SetupResetCog(bot))
+async def setup(bot):
+    await bot.add_cog(SetupResetCog(bot))

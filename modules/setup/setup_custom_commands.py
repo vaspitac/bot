@@ -78,5 +78,5 @@ class SetupCustomCommandsCog(commands.Cog):
         
         await ctx.send(embed=embed, view=CustomCommandView())
 
-def setup(bot):
-    bot.add_cog(SetupCustomCommandsCog(bot))
+async def setup(bot):
+    await bot.add_cog(SetupCustomCommandsCog(bot))

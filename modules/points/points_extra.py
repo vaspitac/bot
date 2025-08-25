@@ -31,5 +31,5 @@ class PointsExtraCog(commands.Cog):
         await ctx.send(info)
 
 # -------------------- LOAD COG --------------------
-def setup(bot):
-    bot.add_cog(PointsExtraCog(bot))
+async def setup(bot):
+    await bot.add_cog(PointsExtraCog(bot))

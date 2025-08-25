@@ -164,5 +164,5 @@ class TicketCommandsCog(commands.Cog):
         # Notify user
         await interaction.followup.send(f"✅ Ticket created: {ticket_channel.mention}", ephemeral=True)
 
-def setup(bot):
-    bot.add_cog(TicketCommandsCog(bot))
+async def setup(bot):
+    await bot.add_cog(TicketCommandsCog(bot))

@@ -59,5 +59,5 @@ class CustomCommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
 # -------------------- LOAD COG --------------------
-def setup(bot):
-    bot.add_cog(CustomCommandsCog(bot))
+async def setup(bot):
+    await bot.add_cog(CustomCommandsCog(bot))
