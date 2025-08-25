@@ -1,4 +1,3 @@
-# main.py
 import discord
 from discord.ext import commands
 import threading
@@ -10,27 +9,38 @@ import os
 # Fix module imports for Render
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# ------------------------
 # Config & webserver
+# ------------------------
 from config import TOKEN
 from webserver import start_server
 
+# ------------------------
 # Database
+# ------------------------
 from database import DatabaseManager
 db = DatabaseManager()
-<<<<<<< HEAD
-from modules.tickets.ticket_creation import setup_ticket_commands
-from modules.tickets.help_command import HelpCommandCog
-=======
 
 # ------------------------
 # Ticket system
 # ------------------------
 from modules.tickets.ticket_commands import setup_ticket_commands
-# Optional: comment out if not implemented yet
-# from modules.tickets.ticket_modal import ...
-# from modules.tickets.ticket_views import ...
-# from modules.tickets.transcript import ...
->>>>>>> a2123b2 (sdasd)
+
+# Optional placeholders to avoid import errors (safe for Render)
+try:
+    from modules.tickets.ticket_modal import *
+except ImportError:
+    pass
+
+try:
+    from modules.tickets.ticket_views import *
+except ImportError:
+    pass
+
+try:
+    from modules.tickets.transcript import *
+except ImportError:
+    pass
 
 # ------------------------
 # Logging
@@ -59,22 +69,14 @@ async def on_ready():
 setup_ticket_commands(bot)
 
 # ------------------------
-<<<<<<< HEAD
-# Load help command
+# Load points modules
 # ------------------------
-bot.add_cog(HelpCommandCog(bot))
+bot.load_extension("modules.points.commands")
+bot.load_extension("modules.points.points_extra")
+bot.load_extension("modules.points.custom_commands")
 
 # ------------------------
-=======
->>>>>>> a2123b2 (sdasd)
-# Load point & custom command cogs
-# ------------------------
-bot.load_extension("modules.points.commands")        # Points management commands
-bot.load_extension("modules.points.points_extra")    # Info/history commands
-bot.load_extension("modules.points.custom_commands") # Custom info commands
-
-# ------------------------
-# Load setup commands
+# Load setup modules
 # ------------------------
 bot.load_extension("modules.setup.setup_commands")
 bot.load_extension("modules.setup.setup_custom_commands")
