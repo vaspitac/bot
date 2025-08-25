@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import asyncio
 import logging
-import os
+from config import TOKEN  # ✅ Uses TOKEN from config.py
 from database import DatabaseManager
 from webserver import start_webserver
 
@@ -88,7 +88,7 @@ start_webserver()
 # Run the bot
 async def main():
     async with bot:
-        await bot.start(os.getenv('DISCORD_TOKEN'))
+        await bot.start(TOKEN)  # ✅ CORRECT - uses TOKEN from config.py
 
 if __name__ == "__main__":
     asyncio.run(main())
