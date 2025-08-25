@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import threading
 import asyncio
 import logging
 import sys
@@ -64,38 +63,31 @@ async def on_ready():
     logger.info("Database initialized.")
 
 # ------------------------
-# Load ticket system
+# Main async entry point
 # ------------------------
-setup_ticket_commands(bot)
+async def main():
+    # Load ticket system (ensure this is async-safe if needed)
+    setup_ticket_commands(bot)
+
+    # Load points modules
+    await bot.load_extension("modules.points.commands")
+    await bot.load_extension("modules.points.points_extra")
+    await bot.load_extension("modules.points.custom_commands")
+
+    # Load setup modules
+    await bot.load_extension("modules.setup.setup_commands")
+    await bot.load_extension("modules.setup.setup_custom_commands")
+    await bot.load_extension("modules.setup.setup_reset")
+    await bot.load_extension("modules.setup.setup_roles_channels")
+
+    # Start web server asynchronously
+    asyncio.create_task(asyncio.to_thread(start_server))
+
+    # Run the bot
+    await bot.start(TOKEN)
 
 # ------------------------
-# Load points modules
-# ------------------------
-bot.load_extension("modules.points.commands")
-bot.load_extension("modules.points.points_extra")
-bot.load_extension("modules.points.custom_commands")
-
-# ------------------------
-# Load setup modules
-# ------------------------
-bot.load_extension("modules.setup.setup_commands")
-bot.load_extension("modules.setup.setup_custom_commands")
-bot.load_extension("modules.setup.setup_reset")
-bot.load_extension("modules.setup.setup_roles_channels")
-
-# ------------------------
-# Start web server
-# ------------------------
-def start_web_server():
-    try:
-        start_server()
-    except Exception as e:
-        logger.error(f"Error starting web server: {e}")
-
-bot.loop.create_task(asyncio.to_thread(start_web_server))
-
-# ------------------------
-# Run the bot
+# Run
 # ------------------------
 if __name__ == "__main__":
-    bot.run(TOKEN)
+    asyncio.run(main())
