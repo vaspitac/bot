@@ -1,12 +1,13 @@
 import discord
 from discord import app_commands, Embed
+from discord.ext import commands
 
 class HelpCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @app_commands.command(name="help", description="Show all bot commands and help")
-    async def slash_help(self, interaction: discord.Interaction):
+    async def help(self, interaction: discord.Interaction):
         embed = Embed(
             title="✨ Bot Commands & Help",
             description="Welcome! Here are all the commands you can use.",
