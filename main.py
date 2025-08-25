@@ -2,92 +2,93 @@ import discord
 from discord.ext import commands
 import asyncio
 import logging
-import sys
 import os
-
-# Fix module imports for Render
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# ------------------------
-# Config & webserver
-# ------------------------
-from config import TOKEN
-from webserver import start_server
-
-# ------------------------
-# Database
-# ------------------------
 from database import DatabaseManager
+from webserver import start_webserver
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Database manager
 db = DatabaseManager()
 
-# ------------------------
-# Ticket system
-# ------------------------
-from modules.tickets.ticket_commands import setup_ticket_commands
+class TicketBot(commands.Bot):
+    def __init__(self):
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.guilds = True
+        intents.members = True
+        
+        super().__init__(
+            command_prefix='!',
+            intents=intents,
+            help_command=None
+        )
 
-# Optional placeholders to avoid import errors (safe for Render)
-try:
-    from modules.tickets.ticket_modal import *
-except ImportError:
-    pass
+    async def setup_hook(self):
+        """Load all cogs when the bot starts"""
+        try:
+            # Load Points System
+            await self.load_extension("modules.points.commands")
+            logger.info("✅ Points commands loaded")
+            
+            await self.load_extension("modules.points.custom_commands")
+            logger.info("✅ Custom commands loaded")
+            
+            await self.load_extension("modules.points.points_extra")
+            logger.info("✅ Points extra loaded")
+            
+            # Load Setup System
+            await self.load_extension("modules.setup.setup_commands")
+            logger.info("✅ Setup commands loaded")
+            
+            await self.load_extension("modules.setup.setup_custom_commands")
+            logger.info("✅ Setup custom commands loaded")
+            
+            await self.load_extension("modules.setup.setup_reset")
+            logger.info("✅ Setup reset loaded")
+            
+            # Load Ticket System
+            await self.load_extension("modules.tickets.ticket_commands")
+            logger.info("✅ Ticket commands loaded")
+            
+            # Load Help System
+            await self.load_extension("modules.utils.help_commands")
+            logger.info("✅ Help commands loaded")
+            
+            logger.info("🎉 All modules loaded successfully!")
+            
+        except Exception as e:
+            logger.error(f"❌ Error loading modules: {e}")
 
-try:
-    from modules.tickets.ticket_views import *
-except ImportError:
-    pass
+    async def on_ready(self):
+        """Called when bot is ready"""
+        logger.info(f"🚀 Logged in as {self.user} (ID: {self.user.id})")
+        
+        # Initialize database
+        await db.initialize_database()
+        logger.info("✅ Database initialized")
+        
+        # Sync slash commands
+        try:
+            synced = await self.tree.sync()
+            logger.info(f"✅ Synced {len(synced)} slash commands")
+        except Exception as e:
+            logger.error(f"❌ Failed to sync commands: {e}")
+        
+        logger.info("🎫 Bot is ready! Ticket system online.")
 
-try:
-    from modules.tickets.transcript import *
-except ImportError:
-    pass
+# Create bot instance
+bot = TicketBot()
 
-# ------------------------
-# Logging
-# ------------------------
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("main")
+# Start webserver in background
+start_webserver()
 
-# ------------------------
-# Bot setup
-# ------------------------
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-# ------------------------
-# Bot events
-# ------------------------
-@bot.event
-async def on_ready():
-    logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    await db.initialize_database()
-    logger.info("Database initialized.")
-
-# ------------------------
-# Main async entry point
-# ------------------------
+# Run the bot
 async def main():
-    # Load ticket system (ensure this is async-safe if needed)
-    setup_ticket_commands(bot)
+    async with bot:
+        await bot.start(os.getenv('DISCORD_TOKEN'))
 
-    # Load points modules
-    await bot.load_extension("modules.points.commands")
-    await bot.load_extension("modules.points.points_extra")
-    await bot.load_extension("modules.points.custom_commands")
-
-    # Load setup modules
-    await bot.load_extension("modules.setup.setup_commands")
-    await bot.load_extension("modules.setup.setup_custom_commands")
-    await bot.load_extension("modules.setup.setup_reset")
-    await bot.load_extension("modules.setup.setup_roles_channels")
-
-    # Start web server asynchronously
-    asyncio.create_task(asyncio.to_thread(start_server))
-
-    # Run the bot
-    await bot.start(TOKEN)
-
-# ------------------------
-# Run
-# ------------------------
 if __name__ == "__main__":
     asyncio.run(main())

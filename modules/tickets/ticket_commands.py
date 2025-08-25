@@ -1,8 +1,10 @@
 import discord
 from discord.ext import commands
 from discord import Embed
-from database import db
-from .ticket_views import TicketView  # Make sure ticket_views.py exists and exports TicketView
+from database import DatabaseManager
+
+# Initialize database
+db = DatabaseManager()
 
 # Points for each ticket category
 CATEGORY_POINTS = {
@@ -37,6 +39,29 @@ CATEGORY_CHANNEL_NAMES = {
     "Daily Temple Express": "templeshrine"
 }
 
+class TicketSelectView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        
+        options = [
+            discord.SelectOption(label=category, value=category, emoji="🎫") 
+            for category in CATEGORY_POINTS.keys()
+        ]
+        
+        self.add_item(TicketSelect(options))
+
+class TicketSelect(discord.ui.Select):
+    def __init__(self, options):
+        super().__init__(placeholder="Choose a ticket type...", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        # Import here to avoid circular imports
+        from modules.tickets.ticket_modal import TicketModal
+        
+        selected_category = self.values[0]
+        modal = TicketModal(selected_category, interaction.guild.id)
+        await interaction.response.send_modal(modal)
+
 class TicketCommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -44,20 +69,42 @@ class TicketCommandsCog(commands.Cog):
         self.CATEGORY_SLOTS = CATEGORY_SLOTS
         self.CATEGORY_CHANNEL_NAMES = CATEGORY_CHANNEL_NAMES
 
+    @commands.command(name="create")
+    @commands.has_permissions(administrator=True)
+    async def create_ticket_panel(self, ctx):
+        """Create the ticket selection panel"""
+        embed = Embed(
+            title="🎫 Create a Ticket",
+            description="Select the type of ticket you want to create:",
+            color=discord.Color.blue()
+        )
+        
+        # Add information about each ticket type
+        for category, points in CATEGORY_POINTS.items():
+            slots = CATEGORY_SLOTS[category]
+            embed.add_field(
+                name=f"🎯 {category}",
+                value=f"Points: {points} | Helpers: {slots}",
+                inline=True
+            )
+        
+        await ctx.send(embed=embed, view=TicketSelectView())
+
     async def create_ticket(self, interaction, category, answers):
+        """Create a ticket with the given category and answers"""
         guild_id = interaction.guild.id
 
-        # Determine ticket number
-        async with db.get_connection() as conn:
-            async with conn.execute(
-                "SELECT MAX(ticket_number) FROM active_tickets WHERE guild_id=? AND ticket_type=?",
-                (guild_id, category)
-            ) as cursor:
-                row = await cursor.fetchone()
-                ticket_number = (row[0] or 0) + 1
+        # Get next ticket number
+        ticket_number = await db.get_next_ticket_number(guild_id, category)
 
         # Channel name
         channel_name = f"{CATEGORY_CHANNEL_NAMES[category]}-{ticket_number}"
+
+        # Get server configuration
+        server_config = await db.get_server_config(guild_id)
+        if not server_config or not server_config.get("ticket_category_id"):
+            await interaction.followup.send("❌ Ticket category not configured! Use `!setup` first.", ephemeral=True)
+            return
 
         # Permissions
         overwrites = {
@@ -66,8 +113,18 @@ class TicketCommandsCog(commands.Cog):
             interaction.guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_messages=True)
         }
 
+        # Add staff/admin permissions
+        if server_config.get("admin_role_id"):
+            admin_role = interaction.guild.get_role(server_config["admin_role_id"])
+            if admin_role:
+                overwrites[admin_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_messages=True)
+        
+        if server_config.get("staff_role_id"):
+            staff_role = interaction.guild.get_role(server_config["staff_role_id"])
+            if staff_role:
+                overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+
         # Create channel
-        server_config = await db.get_server_config(guild_id)
         category_channel = interaction.guild.get_channel(server_config["ticket_category_id"])
         ticket_channel = await interaction.guild.create_text_channel(
             name=channel_name,
@@ -76,21 +133,27 @@ class TicketCommandsCog(commands.Cog):
             reason=f"{category} ticket created by {interaction.user.display_name}"
         )
 
-        # Ticket view
+        # Import TicketView here to avoid circular imports
+        from modules.tickets.ticket_views import TicketView
+        
+        # Create ticket view
         slots = CATEGORY_SLOTS[category]
         ticket_view = TicketView(interaction.user, category, slots, guild_id, ticket_channel)
 
-        # Embed message
-        embed = Embed(title=f"🎫 {category} Ticket", color=discord.Color.green())
+        # Create embed
+        embed = Embed(title=f"🎫 {category} Ticket #{ticket_number}", color=discord.Color.green())
+        embed.add_field(name="👤 Created by", value=interaction.user.mention, inline=True)
+        
         for k, v in answers.items():
             if v:
                 embed.add_field(name=f"{k}", value=v, inline=True)
+        
         helper_list = [f"{i+1}. [Empty]" for i in range(slots)]
         embed.add_field(name="👥 Helpers", value="\n".join(helper_list), inline=False)
         embed.add_field(name="🏆 Points Value", value=f"{CATEGORY_POINTS[category]} points", inline=True)
 
         await ticket_channel.send(
-            f"Hello {interaction.user.mention}! Your ticket has been created.",
+            f"Hello {interaction.user.mention}! Your **{category}** ticket has been created.",
             embed=embed,
             view=ticket_view
         )
@@ -98,6 +161,8 @@ class TicketCommandsCog(commands.Cog):
         # Save ticket in database
         await db.save_active_ticket(guild_id, ticket_channel.id, interaction.user.id, category, ticket_number)
 
-# Setup function for loading as a Cog
-def setup_ticket_commands(bot):
+        # Notify user
+        await interaction.followup.send(f"✅ Ticket created: {ticket_channel.mention}", ephemeral=True)
+
+def setup(bot):
     bot.add_cog(TicketCommandsCog(bot))

@@ -1,7 +1,7 @@
 # modules/setup/setup_custom_commands.py
 import discord
 from discord.ext import commands
-from discord.ui import Modal, TextInput
+from discord.ui import Modal, TextInput, View, Button
 from discord import Interaction
 from database import DatabaseManager
 
@@ -12,11 +12,22 @@ class CustomCommandModal(Modal):
         super().__init__(title=f"Setup {command_name} Command")
         self.command_name = command_name
 
-        self.content_input = TextInput(label="Command Content", placeholder="Enter content...", default=existing_content, style=discord.TextStyle.long, max_length=2000)
+        self.content_input = TextInput(
+            label="Command Content", 
+            placeholder="Enter content...", 
+            default=existing_content, 
+            style=discord.TextStyle.long, 
+            max_length=2000
+        )
         self.add_item(self.content_input)
 
         if command_name == "proof":
-            self.image_input = TextInput(label="Image URL (Optional)", placeholder="Image URL", default=existing_image, required=False)
+            self.image_input = TextInput(
+                label="Image URL (Optional)", 
+                placeholder="Image URL", 
+                default=existing_image, 
+                required=False
+            )
             self.add_item(self.image_input)
 
     async def on_submit(self, interaction: Interaction):
@@ -26,17 +37,46 @@ class CustomCommandModal(Modal):
         await db.set_custom_command(interaction.guild.id, self.command_name, content, image_url)
         await interaction.response.send_message(f"✅ Custom command `!{self.command_name}` configured!", ephemeral=True)
 
+class CustomCommandView(View):
+    def __init__(self):
+        super().__init__(timeout=60)
+
+    @discord.ui.button(label="Setup rrules", style=discord.ButtonStyle.primary, emoji="📜")
+    async def setup_rrules(self, interaction: discord.Interaction, button: discord.ui.Button):
+        existing = await db.get_custom_command(interaction.guild.id, "rrules")
+        content = existing['content'] if existing else ""
+        await interaction.response.send_modal(CustomCommandModal("rrules", content))
+
+    @discord.ui.button(label="Setup hrules", style=discord.ButtonStyle.primary, emoji="📋")
+    async def setup_hrules(self, interaction: discord.Interaction, button: discord.ui.Button):
+        existing = await db.get_custom_command(interaction.guild.id, "hrules")
+        content = existing['content'] if existing else ""
+        await interaction.response.send_modal(CustomCommandModal("hrules", content))
+
+    @discord.ui.button(label="Setup proof", style=discord.ButtonStyle.primary, emoji="📸")
+    async def setup_proof(self, interaction: discord.Interaction, button: discord.ui.Button):
+        existing = await db.get_custom_command(interaction.guild.id, "proof")
+        content = existing['content'] if existing else ""
+        image = existing['image_url'] if existing else ""
+        await interaction.response.send_modal(CustomCommandModal("proof", content, image))
+
 class SetupCustomCommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="setupcommand")
+    @commands.command(name="setupcommands")
     @commands.has_permissions(administrator=True)
-    async def setupcommand(self, ctx, command_name: str):
-        if command_name not in ["rrules", "hrules", "proof"]:
-            await ctx.send("❌ Invalid command name. Use rrules, hrules, or proof.")
-            return
-        await ctx.send_modal(CustomCommandModal(command_name))
+    async def setupcommands(self, ctx):
+        embed = discord.Embed(
+            title="🛠️ Setup Custom Commands",
+            description="Click the buttons below to configure custom commands:",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="📜 rrules", value="Runner rules command", inline=True)
+        embed.add_field(name="📋 hrules", value="Helper rules command", inline=True)
+        embed.add_field(name="📸 proof", value="Proof submission command", inline=True)
+        
+        await ctx.send(embed=embed, view=CustomCommandView())
 
 def setup(bot):
     bot.add_cog(SetupCustomCommandsCog(bot))
