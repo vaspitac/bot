@@ -14,11 +14,23 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import TOKEN
 from webserver import start_server
 
-# Modules
+# Database
 from database import DatabaseManager
 db = DatabaseManager()
+<<<<<<< HEAD
 from modules.tickets.ticket_creation import setup_ticket_commands
 from modules.tickets.help_command import HelpCommandCog
+=======
+
+# ------------------------
+# Ticket system
+# ------------------------
+from modules.tickets.ticket_commands import setup_ticket_commands
+# Optional: comment out if not implemented yet
+# from modules.tickets.ticket_modal import ...
+# from modules.tickets.ticket_views import ...
+# from modules.tickets.transcript import ...
+>>>>>>> a2123b2 (sdasd)
 
 # ------------------------
 # Logging
@@ -47,16 +59,27 @@ async def on_ready():
 setup_ticket_commands(bot)
 
 # ------------------------
+<<<<<<< HEAD
 # Load help command
 # ------------------------
 bot.add_cog(HelpCommandCog(bot))
 
 # ------------------------
+=======
+>>>>>>> a2123b2 (sdasd)
 # Load point & custom command cogs
 # ------------------------
 bot.load_extension("modules.points.commands")        # Points management commands
 bot.load_extension("modules.points.points_extra")    # Info/history commands
 bot.load_extension("modules.points.custom_commands") # Custom info commands
+
+# ------------------------
+# Load setup commands
+# ------------------------
+bot.load_extension("modules.setup.setup_commands")
+bot.load_extension("modules.setup.setup_custom_commands")
+bot.load_extension("modules.setup.setup_reset")
+bot.load_extension("modules.setup.setup_roles_channels")
 
 # ------------------------
 # Start web server
