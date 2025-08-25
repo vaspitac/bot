@@ -1,63 +1,38 @@
 import discord
-from discord.ext import commands
-from discord import Embed
-from database import DatabaseManager
+from discord import app_commands, Embed, Color, ui
 
-db = DatabaseManager()  # initialize your database manager
+class PanelView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(ui.Button(label="Ultra Speaker Express", custom_id="ultra_speaker", style=discord.ButtonStyle.primary))
+        self.add_item(ui.Button(label="Ultra Gramiel Express", custom_id="ultra_gramiel", style=discord.ButtonStyle.primary))
+        self.add_item(ui.Button(label="4-Man Ultra Daily Express", custom_id="4man_ultra_daily", style=discord.ButtonStyle.primary))
+        self.add_item(ui.Button(label="7-Man Ultra Daily Express", custom_id="7man_ultra_daily", style=discord.ButtonStyle.primary))
+        self.add_item(ui.Button(label="Ultra Weekly Express", custom_id="ultra_weekly", style=discord.ButtonStyle.primary))
+        self.add_item(ui.Button(label="Grim Express", custom_id="grim_express", style=discord.ButtonStyle.primary))
+        self.add_item(ui.Button(label="Daily Temple Express", custom_id="daily_temple", style=discord.ButtonStyle.primary))
 
-class CustomCommandsCog(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
-    @commands.command(name="rrules")
-    async def rrules_command(self, ctx):
-        """Display custom rules for runners"""
-        command_data = await db.get_custom_command(ctx.guild.id, "rrules")
-        if not command_data:
-            await ctx.send("❌ Runner rules have not been configured. Use `!setup` to configure custom commands.")
-            return
-        
-        embed = Embed(
-            title="📜 Runner Rules",
-            description=command_data['content'],
-            color=discord.Color.blue()
-        )
-        await ctx.send(embed=embed)
-
-    @commands.command(name="hrules")
-    async def hrules_command(self, ctx):
-        """Display custom rules for helpers"""
-        command_data = await db.get_custom_command(ctx.guild.id, "hrules")
-        if not command_data:
-            await ctx.send("❌ Helper rules have not been configured. Use `!setup` to configure custom commands.")
-            return
-        
-        embed = Embed(
-            title="📋 Helper Rules",
-            description=command_data['content'],
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-
-    @commands.command(name="proof")
-    async def proof_command(self, ctx):
-        """Display proof submission instructions"""
-        command_data = await db.get_custom_command(ctx.guild.id, "proof")
-        if not command_data:
-            await ctx.send("❌ Proof instructions have not been configured. Use `!setup` to configure custom commands.")
-            return
-        
-        embed = Embed(
-            title="📸 Proof Submission",
-            description=command_data['content'],
-            color=discord.Color.gold()
-        )
-        
-        if command_data.get('image_url'):
-            embed.set_image(url=command_data['image_url'])
-        
-        await ctx.send(embed=embed)
-
-# -------------------- LOAD COG --------------------
-async def setup(bot):
-    await bot.add_cog(CustomCommandsCog(bot))
+@app_commands.command(name="panel", description="Show the helper panel")
+async def slash_panel(interaction: discord.Interaction):
+    embed = Embed(
+        title="🎮 In-game Assistance",
+        description=(
+            "Select a service below to create a help ticket. Our helpers will assist you!\n\n"
+            "### 📜 Guidelines & Rules: Use /hrules, /rrules, and /proof commands\n"
+            "### 📋 Available Services\n"
+            "- Ultra Speaker Express — 8 points\n"
+            "- Ultra Gramiel Express — 7 points\n"
+            "- 4-Man Ultra Daily Express — 4 points\n"
+            "- 7-Man Ultra Daily Express — 7 points\n"
+            "- Ultra Weekly Express — 12 points\n"
+            "- Grim Express — 10 points\n"
+            "- Daily Temple Express — 6 points\n"
+            "### ℹ️ How it works\n"
+            "1. Select a service\n"
+            "2. Fill out the form\n"
+            "3. Wait for helpers to join\n"
+            "4. Get help in your private ticket!"
+        ),
+        color=Color.purple()
+    )
+    await interaction.response.send_message(embed=embed, view=PanelView(), ephemeral=True)
